@@ -1,25 +1,27 @@
-import jsonschema
-from jsonschema import Draft4Validator
-from jsonschema.compat import iteritems
-import json
 import codecs
 import copy
+import json
+import logging
 import os.path
+
 import inflection
+from jsonschema import Draft4Validator
+import jsonschema
+from jsonschema.compat import iteritems
 import six
 
-import logging
+import python_jsonschema_objects.classbuilder as classbuilder
+import python_jsonschema_objects.util
+from python_jsonschema_objects.validators import ValidationError
+
+
 logger = logging.getLogger(__name__)
 
 
-import python_jsonschema_objects.classbuilder as classbuilder
-from python_jsonschema_objects.validators import ValidationError
-import python_jsonschema_objects.util
-import python_jsonschema_objects.markdown_support
-
-__all__ = ['ObjectBuilder', 'markdown_support', 'ValidationError']
+__all__ = ['ObjectBuilder', 'ValidationError']
 
 FILE = __file__
+
 
 class ObjectBuilder(object):
     def __init__(self,
@@ -68,14 +70,13 @@ class ObjectBuilder(object):
     @property
     def classes(self):
         if self._classes is None:
-          self._classes = self.build_classes()
+            self._classes = self.build_classes()
         return self._classes
 
     def get_class(self, uri):
         if self._resolved is None:
-          self._classes = self.build_classes()
+            self._classes = self.build_classes()
         return self._resolved.get(uri, None)
-
 
     def memory_resolver(self, uri):
         return self.mem_resolved[uri[7:]]
@@ -92,7 +93,7 @@ class ObjectBuilder(object):
         except jsonschema.ValidationError as e:
             raise ValidationError(e)
 
-    def build_classes(self,strict=False, named_only=False, standardize_names=True):
+    def build_classes(self, strict=False, named_only=False, standardize_names=True):
         """
         Build all of the classes named in the JSONSchema.
 
@@ -124,14 +125,14 @@ class ObjectBuilder(object):
             builder.construct(uri, defn, **kw)
 
         if standardize_names:
-            name_transform = lambda t: inflection.camelize(inflection.parameterize(six.text_type(t), '_'))
+            def name_transform(t): return inflection.camelize(inflection.parameterize(six.text_type(t), '_'))
         else:
-            name_transform = lambda t: t
+            def name_transform(t): return t
 
         nm = self.schema['title'] if 'title' in self.schema else self.schema['id']
         nm = inflection.parameterize(six.text_type(nm), '_')
 
-        builder.construct(nm, self.schema,**kw)
+        builder.construct(nm, self.schema, **kw)
         self._resolved = builder.resolved
 
         classes = {}
@@ -149,6 +150,4 @@ if __name__ == '__main__':
 
     validator = ObjectBuilder("../../protocol/json/schema.json")
 
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
+__version__ = '0.3.3.1-adt'
